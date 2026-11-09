@@ -1,0 +1,108 @@
+/*
+ * La Carte — end-to-end business flows (current state, as evidenced by client code).
+ * Generated 2026-11-08 by architecture-visualization:flow-visualizer + graphviz.
+ * Evidence: docs/architecture/architecture-understanding.md
+ *
+ * READING RULE: solid green = confirmed in this repo. Amber dashed = the UI step is
+ * confirmed but the server-side business effect CANNOT be verified from this repo
+ * (no backend code, no route handlers, no server actions, no integration tests).
+ * Open with Qoder's Graphviz DOT viewer.
+ */
+digraph lacarte_business_flows {
+  rankdir=TB;
+  compound=true;
+  fontname="Helvetica";
+  node [fontname="Helvetica", fontsize=11, shape=box, style="rounded,filled", fillcolor="#e8f0e8", color="#1b4332"];
+  edge [fontname="Helvetica", fontsize=9, color="#1b4332"];
+  labelloc="t";
+  label="La Carte customer portal — three critical business paths\nSolid = confirmed client behaviour | Amber dashed = server effect UNKNOWN (backend not in repo)";
+  fontsize=15;
+
+  /* ─────────────── FLOW A: identity + onboarding ─────────────── */
+  subgraph cluster_a {
+    label="A. Sign up → verify → onboard  (src/app/(auth)/*, src/lib/services/api-services.ts:81-313)";
+    style="rounded"; color="#94a3b8"; fontsize=12; bgcolor="#f8fafc";
+
+    a_start   [label="Customer opens /sign-up", shape=ellipse, fillcolor="#0a0d12", fontcolor="#ffffff"];
+    a_types   [label="UI: load customer types + active zones\nGET /api/customer/types, /api/zone/public/list\nsign-up/page.tsx:51-54"];
+    a_submit  [label="UI: submit registration\nPOST /api/customer/sign-up\nsign-up/page.tsx:105"];
+    a_acct    [label="Account created + email queued\n(UNKNOWN — backend effect)", fillcolor="#fef3c7", color="#b45309", style="rounded,filled,dashed"];
+    a_otp     [label="UI: send OTP → /verify-otp?email=…\nsign-up/page.tsx:117-123"];
+    a_verify  [label="UI: checkOtp then verifyEmail\nverify-otp/page.tsx:44-48"];
+    a_token   [label="Token returned → setSessionDirect\nlocalStorage 'lacarte_bearer_token'\nverify-otp/page.tsx:51; api-client.ts:39-54"];
+    a_loc     [label="UI: pick location on Leaflet map\nTomTom search → reverse geocode\nPOST /api/location/\nonboarding/location/page.tsx; api-services.ts:159"];
+    a_route   [label="UI: route by onboarding flags\nlocation → subscription → dashboard\nsign-in/page.tsx:33-62"];
+    a_guard   [label="Client-only guard\n(app)/layout.tsx:13-25 redirects if !isAuthenticated\nNo middleware.ts, no cookie, no server check", fillcolor="#fee2e2", color="#dc2626"];
+
+    a_start -> a_types -> a_submit;
+    a_submit -> a_acct [style=dashed, color="#b45309", label="submits to"];
+    a_acct -> a_otp [style=dashed, color="#b45309", label="assumed"];
+    a_submit -> a_otp [label="client continues regardless"];
+    a_otp -> a_verify -> a_token -> a_loc -> a_route -> a_guard;
+  }
+
+  /* ─────────────── FLOW B: pickup booking → payment → tracking ─────────────── */
+  subgraph cluster_b {
+    label="B. Book a pickup → pay → track the truck  (pickups/new, pickups/[id]/track, dashboard)";
+    style="rounded"; color="#94a3b8"; fontsize=12; bgcolor="#f8fafc";
+
+    b_start   [label="Customer taps 'Schedule Pickup'\nHidden when subscribed: app-shell.tsx:90", shape=ellipse, fillcolor="#0a0d12", fontcolor="#ffffff"];
+    b_form    [label="UI: choose waste type, date, emergency\npickups/new/page.tsx:83-103"];
+    b_addr    [label="UI: address field is COSMETIC\nTyped address/coords are deliberately NOT sent\npickups/new/page.tsx:43-49,228-229", fillcolor="#fee2e2", color="#dc2626"];
+    b_quote   [label="UI: price preview modal (PAYG / emergency)\nGET /api/pickup-requests/price-preview\npickups/new/page.tsx:205-217,494-535"];
+    b_fee     [label="Emergency fee fetch fails → null (non-blocking)\napi-services.ts:377-391", fillcolor="#fef3c7", color="#b45309"];
+    b_create  [label="UI: submit booking\nPOST /api/pickup-requests\n{disposableItemTypeId, preferredPickupDate,\n isEmergency, truckLoadRateId?, additionalNotes?}\napi-services.ts:353-368"];
+    b_persist [label="Pickup persisted + priced + assigned\n(UNKNOWN — backend effect)", fillcolor="#fef3c7", color="#b45309", style="rounded,filled,dashed"];
+    b_pay     [label="UI: 'Approve the Mobile Money prompt'\nPoll pickup paymentStatus every 5s × 24\npickups/new/page.tsx:148-170"];
+    b_charge  [label="MoMo charge + paymentStatus transition\n(UNKNOWN — no SDK, no callback in repo)", fillcolor="#fef3c7", color="#b45309", style="rounded,filled,dashed"];
+    b_list    [label="UI: pickup list action matrix\npending→reschedule/cancel · assigned/scheduled→cancel\nen_route/truck_dispatched→track · completed/cancelled/expired→none\npickup-display.ts:7-15,41-58"];
+    b_poll    [label="List polls every 10s only while requiresPayment\npayment-state.ts:16-20"];
+    b_track   [label="UI: live tracking map\nGET /api/pickup-requests/{id}/tracking/sse\nfetch-stream + Bearer header (not EventSource)\ntracking-sse.ts:23-56"];
+    b_sse     [label="SSE events: connected(driverName,truckPlate), location(lat,lng,duration)\nNo heartbeat timeout; caller reconnects after 5s\ntracking-sse.ts:123-156; track/page.tsx:106-110", fillcolor="#fef3c7", color="#b45309"];
+    b_eta     [label="UI: ETA = server durationSeconds, else TomTom route\ntrack/page.tsx:69-88; dashboard/page.tsx:97-131"];
+    b_done    [label="Customer sees truck arrive / pickup completed\nStatus string comes from backend — enum only client-side", shape=ellipse, fillcolor="#e8f0e8"];
+
+    b_start -> b_form -> b_addr -> b_quote -> b_create;
+    b_quote -> b_fee [style=dashed, color="#b45309", label="on error"];
+    b_fee -> b_create [style=dashed, color="#b45309", label="continues"];
+    b_create -> b_persist [style=dashed, color="#b45309", label="submits to"];
+    b_persist -> b_pay [style=dashed, color="#b45309", label="if requiresPayment"];
+    b_pay -> b_charge [style=dashed, color="#b45309", label="assumed server-initiated"];
+    b_charge -> b_list [style=dashed, color="#b45309", label="poll confirms"];
+    b_persist -> b_list [style=dashed, color="#b45309", label="subscription path (no charge)"];
+    b_list -> b_poll -> b_track -> b_sse -> b_eta -> b_done;
+  }
+
+  /* ─────────────── FLOW C: shop → cart → checkout ─────────────── */
+  subgraph cluster_c {
+    label="C. Buy supplies → cart → MoMo checkout  (shop, cart, checkout, orders)";
+    style="rounded"; color="#94a3b8"; fontsize=12; bgcolor="#f8fafc";
+
+    c_start   [label="Customer browses /shop\nGET categories + products (page 1, 20 items)", shape=ellipse, fillcolor="#0a0d12", fontcolor="#ffffff"];
+    c_filter  [label="UI: search/category filter only the loaded page\nNo pagination controls rendered\nshop/page.tsx:34,42,47-49", fillcolor="#fee2e2", color="#dc2626"];
+    c_add     [label="UI: add to cart → Cart context\nPOST /api/store-orders/cart/items\napp-providers.tsx:505-549"];
+    c_queue   [label="Serialized mutation queue + generation counter\nOut-of-order responses discarded as 'stale'\nErrors resolve {status:'failed'}, never reject\ncart-mutation-controller.ts:7,21-38"];
+    c_server  [label="Cart persisted per account (server-side)\nReload survives; logout clears it\napp-providers.tsx:210,345,426-445"];
+    c_fee     [label="Delivery fee: zone matched by NAME string equality,\nfallback = first rule. Free iff totalCount >= freeDeliveryMinQuantity\napp-providers.tsx:449-466; delivery-fee.ts:19-38", fillcolor="#fef3c7", color="#b45309"];
+    c_cart    [label="UI: /cart review → 'Proceed to Checkout' is a Link\ncart/page.tsx:122-206"];
+    c_addr    [label="UI: /checkout — pick/create address + MoMo number\nValidates >= 10 digits and a resolved delivery fee\ncheckout/page.tsx:60-63,117,136-177"];
+    c_submit  [label="UI: POST /api/store-orders/orders/checkout\n{deliveryAddressId, mobileNumber, paymentMethod:'blupay'}\napi-services.ts:685-702"];
+    c_order   [label="Order created + MoMo push initiated + stock reserved\n(UNKNOWN — backend effect)", fillcolor="#fef3c7", color="#b45309", style="rounded,filled,dashed"];
+    c_poll    [label="UI: 'Approve the Mobile Money prompt'\nPoll GET order details every 5s × 60 attempts\ncheckout/page.tsx:21-22,73-107,170"];
+    c_paid    [label="paymentStatus / deliveryStatus transition\nPlain strings in DTO — NO enum defined\nmodels.ts:1147-1253 (UNKNOWN semantics)", fillcolor="#fef3c7", color="#b45309", style="rounded,filled,dashed"];
+    c_hist    [label="UI: /orders + /orders/[id]\ncancel order, download invoice PDF\norders/[id]/page.tsx:33-75"];
+    c_bad     [label="UI: 'Delivery: Paid separately' rendered unconditionally\norders/[id]/page.tsx:177-179", fillcolor="#fee2e2", color="#dc2626"];
+
+    c_start -> c_filter -> c_add -> c_queue -> c_server;
+    c_server -> c_fee [style=dashed, color="#b45309", label="fragile match"];
+    c_server -> c_cart -> c_addr -> c_submit;
+    c_submit -> c_order [style=dashed, color="#b45309", label="submits to"];
+    c_order -> c_poll [style=dashed, color="#b45309", label="assumed"];
+    c_poll -> c_paid [style=dashed, color="#b45309", label="poll confirms"];
+    c_paid -> c_hist -> c_bad;
+  }
+
+  /* cross-flow shared dependency */
+  a_token -> b_start [style=dotted, color="#64748b", label="authenticated session", lhead=cluster_b];
+  a_token -> c_start [style=dotted, color="#64748b", label="authenticated session", lhead=cluster_c];
+}

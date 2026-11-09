@@ -1,0 +1,133 @@
+/*
+ * La Carte — L3 module dependency + test-coverage map (current state).
+ * Generated 2026-11-08 by architecture-visualization:dependency-impact-analyzer + graphviz.
+ * Evidence: docs/architecture/architecture-understanding.md
+ *
+ * Green border = has unit tests. Red border = zero tests. Amber = external/unknown.
+ * Edge label = dependency kind. Open with Qoder's Graphviz DOT viewer.
+ */
+digraph lacarte_modules {
+  rankdir=TB;
+  fontname="Helvetica";
+  node [fontname="Helvetica", fontsize=10, shape=box, style="rounded,filled", fillcolor="#ffffff", color="#1b4332", penwidth=2];
+  edge [fontname="Helvetica", fontsize=8, color="#475569"];
+  labelloc="t";
+  fontsize=15;
+  label="La Carte web — module dependencies and test coverage\nGreen = unit-tested | Red = no tests | Amber = outside this repo\n53 tests / 8 files, all in lib/. Zero component, integration or E2E tests.";
+
+  subgraph cluster_ui {
+    label="UI layer — src/app, src/components  (0 tests)";
+    style="rounded"; color="#dc2626"; bgcolor="#fef2f2"; fontsize=11;
+
+    layout   [label="app/layout.tsx\nONLY server component\nfonts + metadata", color="#dc2626"];
+    routes   [label="27 × page.tsx\nALL 'use client'\nno loading/error/not-found", color="#dc2626"];
+    shell    [label="app-shell.tsx\nsidebar / bottom bar / cart drawer\nDEAD nav filter :126-131", color="#dc2626"];
+    common   [label="ui/common.tsx\nNetworkErrorView, PageLoader, StatusBadge\n(no design-system primitives)", color="#dc2626"];
+    imap     [label="map/interactive-map.tsx\nLeaflet, dynamic import", color="#dc2626"];
+  }
+
+  subgraph cluster_state {
+    label="State layer — src/providers  (0 tests, 769 lines)";
+    style="rounded"; color="#dc2626"; bgcolor="#fef2f2"; fontsize=11;
+
+    providers [label="app-providers.tsx\nQueryClient + UIFeedback + Auth + Cart\n401 guard :203-226\nsession bootstrap :229-276\nOPTIMISTIC OFFLINE AUTH :266-269\ncart + delivery fee :426-466", color="#dc2626", fillcolor="#fee2e2"];
+  }
+
+  subgraph cluster_service {
+    label="Service layer — src/lib/services";
+    style="rounded"; color="#94a3b8"; bgcolor="#f8fafc"; fontsize=11;
+
+    apis      [label="api-services.ts (867 lines)\n10 services / ~70 endpoints\nonly payload shapes tested (6 cases)", color="#dc2626", fillcolor="#fff7ed"];
+    mapsrv    [label="map-service.ts\nTomTom → Nominatim fallback\ncatch → empty results", color="#dc2626"];
+    sse       [label="tracking-sse.ts\nfetch-stream SSE parser\nno heartbeat / no auto-reconnect", color="#dc2626"];
+    payload_t [label="payload.test.ts (6)\nasserts request bodies of api-services\n(misleading name — no payload.ts)", color="#16a34a", fillcolor="#f0fdf4"];
+  }
+
+  subgraph cluster_transport {
+    label="Transport + parsing — src/lib";
+    style="rounded"; color="#94a3b8"; bgcolor="#f8fafc"; fontsize=11;
+
+    client  [label="api-client.ts (228)\nBearer from localStorage\n12s timeout · 401 guard\n500 discards server message", color="#16a34a", fillcolor="#f0fdf4"];
+    client_t[label="api-client.test.ts (8)", color="#16a34a", fillcolor="#f0fdf4"];
+    config  [label="config.ts\nbaseUrl '' → same-origin proxy\nSSR fallback localhost:3000\npublic TomTom key", color="#dc2626"];
+    parse   [label="json-parse.ts (113)\nasStr/asInt/asDouble/asList\nbad date → epoch 1970\nmalformed row → console.warn + skip", color="#dc2626", fillcolor="#fff7ed"];
+    models  [label="types/models.ts (1399)\nDTO interfaces + parse* guards\nstock missing → 10\ninvoice/order/ticket status = plain string", color="#dc2626", fillcolor="#fff7ed"];
+    currency[label="currency.ts\nformatGhs", color="#dc2626"];
+  }
+
+  subgraph cluster_domain {
+    label="Domain rules — src/lib/domain  (39 tests, pure functions)";
+    style="rounded"; color="#16a34a"; bgcolor="#f0fdf4"; fontsize=11;
+
+    binv   [label="bin-inventory.ts (4 tests)\nmerge sources · replace-all payload\npreserves retired-rate bins", color="#16a34a"];
+    cartc  [label="cart-mutation-controller.ts (3)\nserialized queue + generation\nstale discard · errors never reject", color="#16a34a"];
+    dfee   [label="delivery-fee.ts (5)\nempty→loading→error→unavailable→ready\nfree iff count >= threshold", color="#16a34a"];
+    pstate [label="payment-state.ts (9)\n10s poll gate · subscription confirmation", color="#16a34a"];
+    pmode  [label="pricing-mode.ts (15)\nfull_truck → per-bin degradation\ndisplayOrder parsed but NEVER sorted", color="#16a34a"];
+    sdisp  [label="subscription-display.ts (3)\nplanType overrides paymentType", color="#16a34a"];
+    pdisp  [label="pickup-display.ts (0 tests)\n8-state action matrix · reschedule window\nCANCELLABLE const is dead code", color="#dc2626", fillcolor="#fff7ed"];
+  }
+
+  subgraph cluster_ext {
+    label="Outside this repository — behaviour UNVERIFIED";
+    style="rounded"; color="#b45309"; bgcolor="#fffbeb"; fontsize=11;
+
+    nextproxy [label="next.config.ts\n/api/:path* → LACARTE_API_BASE_URL\ndefault = PRODUCTION backend\nimages.remotePatterns = ANY http/https host\nno headers · no CSP", fillcolor="#fef3c7", color="#b45309"];
+    backend   [label="lacarteprod.lazynerdstudios.com\nowns pricing, payment, orders,\nsubscription + pickup lifecycle", fillcolor="#fef3c7", color="#b45309"];
+    blupay    [label="'blupay' Mobile Money\ndefaulted api-services.ts:697\nno SDK · no callback · UNKNOWN", fillcolor="#fef3c7", color="#b45309"];
+    tomtom    [label="TomTom tiles/search/routing", fillcolor="#fef3c7", color="#b45309"];
+    osm       [label="OSM tiles / Nominatim", fillcolor="#fef3c7", color="#b45309"];
+  }
+
+  /* dependencies */
+  layout -> providers [label="wraps"];
+  routes -> shell [label="renders in"];
+  routes -> common [label="uses"];
+  routes -> providers [label="useAuth/useCart/useFeedback"];
+  routes -> apis [label="queries + mutations"];
+  routes -> pdisp [label="action matrix"];
+  routes -> pstate [label="poll gate"];
+  routes -> pmode [label="tier/quote selection"];
+  routes -> sdisp [label="prepaid label"];
+  routes -> binv [label="bin payload"];
+  routes -> dfee [label="fee state"];
+  routes -> currency [label="formatGhs"];
+  routes -> imap [label="map"];
+  routes -> sse [label="live tracking"];
+  shell -> providers [label="useAuth/useCart"];
+  shell -> apis [label="notifications badge\nWRONG query key :71"];
+  shell -> currency;
+  imap -> mapsrv [label="tiles/route"];
+  imap -> config [label="tile URL"];
+
+  providers -> apis [label="session + cart"];
+  providers -> client [label="TokenStorage + authSessionGuard"];
+  providers -> cartc [label="serialize cart writes"];
+  providers -> dfee [label="fee state"];
+  providers -> models [label="profile/cart DTOs"];
+
+  apis -> client [label="apiRequest / apiRequestBlob"];
+  apis -> models [label="parse* guards"];
+  apis -> parse [label="via models"];
+  payload_t -> apis [label="asserts bodies", style=dashed, color="#16a34a"];
+  client -> config [label="resolveApiUrl"];
+  client_t -> client [label="covers", style=dashed, color="#16a34a"];
+  models -> parse [label="asStr/asInt/…"];
+  mapsrv -> config [label="key + bias"];
+  sse -> client [label="TokenStorage"];
+
+  binv -> models;
+  dfee -> models;
+  pmode -> models;
+  pstate -> models;
+  sdisp -> models;
+  pdisp -> models;
+  cartc -> models [style=dotted, label="types only"];
+
+  client -> nextproxy [label="same-origin /api/*"];
+  nextproxy -> backend [label="rewrite, forwards Bearer"];
+  backend -> blupay [label="charge? UNKNOWN", style=dashed, color="#b45309"];
+  mapsrv -> tomtom [label="HTTPS"];
+  mapsrv -> osm [label="fallback", style=dashed];
+  sse -> nextproxy [label="SSE via rewrite\nbuffering risk", style=dashed, color="#b45309"];
+}
