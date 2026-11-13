@@ -9,6 +9,7 @@ import {
   asList,
   asMap,
   asStr,
+  extractList,
 } from '@/lib/json-parse';
 import { isPrepaidSubscription } from '@/lib/domain/subscription-display';
 
@@ -988,7 +989,7 @@ export interface StoreProduct {
 }
 
 export function parseStoreProduct(json: Record<string, unknown>): StoreProduct {
-  const data = asMap(json.data) ?? json;
+  const data = asMap(json.data) ?? asMap(json.product) ?? json;
   const cat = asMap(data.category);
   const rawImages = Array.isArray(data.images)
     ? data.images
@@ -1005,10 +1006,10 @@ export function parseStoreProduct(json: Record<string, unknown>): StoreProduct {
 
   const stock = asInt(data.stockQuantity, asInt(data.stock, 10));
   return {
-    id: asStr(data.id),
-    name: asStr(data.name),
+    id: asStr(data.id, asStr(data.productId)),
+    name: asStr(data.name, asStr(data.productName)),
     description: asStr(data.description),
-    price: asDouble(data.price),
+    price: asDouble(data.price, asDouble(data.unitPrice)),
     stockQuantity: stock,
     images,
     categoryId: asStr(data.categoryId, asStr(cat?.id)),
@@ -1068,20 +1069,34 @@ export interface StoreCart {
 
 export function parseStoreCart(json: Record<string, unknown>): StoreCart {
   const data = asMap(json.data) ?? asMap(json.cart) ?? json;
+  const rawItems = Array.isArray(data.items)
+    ? data.items
+    : Array.isArray(data.cartItems)
+      ? data.cartItems
+      : extractList(data, ['items', 'cartItems', 'data']);
   const items = asList(
-    data.items,
+    rawItems,
     (item) => {
       const prod = asMap(item.product);
-      const unitPrice = asDouble(item.unitPrice, asDouble(prod?.price));
+      const prodImages = Array.isArray(prod?.images) ? prod.images : [];
+      const firstProdImg =
+        typeof prodImages[0] === 'string'
+          ? prodImages[0]
+          : asStr(asMap(prodImages[0])?.url || asMap(prodImages[0])?.imageUrl);
+      const unitPrice = asDouble(item.unitPrice, asDouble(item.price, asDouble(prod?.price)));
       const quantity = asInt(item.quantity, 1);
+      const imageUrl = asStr(
+        item.imageUrl,
+        asStr(prod?.imageUrl, firstProdImg),
+      );
       return {
-        id: asStr(item.id),
+        id: asStr(item.id, asStr(item.cartItemId)),
         productId: asStr(item.productId, asStr(prod?.id)),
-        productName: asStr(item.productName, asStr(prod?.name, 'Item')),
+        productName: asStr(item.productName, asStr(item.name, asStr(prod?.name, 'Item'))),
         unitPrice,
         quantity,
-        lineTotal: asDouble(item.lineTotal, unitPrice * quantity),
-        imageUrl: item.imageUrl ? asStr(item.imageUrl) : null,
+        lineTotal: asDouble(item.lineTotal, asDouble(item.totalPrice, unitPrice * quantity)),
+        imageUrl: imageUrl || null,
       };
     },
     'cartItems',

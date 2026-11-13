@@ -59,7 +59,7 @@ export default function ShopCatalogPage() {
   });
 
   const getCartItem = (productId: string) =>
-    items.find((i) => i.productId === productId);
+    productId ? items.find((i) => i.productId && i.productId === productId) : undefined;
 
   return (
     <div className="space-y-6">

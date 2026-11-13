@@ -9,7 +9,8 @@
 
 export function asStr(value: unknown, fallback = ''): string {
   if (value === null || value === undefined) return fallback;
-  return String(value);
+  const s = String(value);
+  return s === '' ? fallback : s;
 }
 
 export function asInt(value: unknown, fallback = 0): number {

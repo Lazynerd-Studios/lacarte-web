@@ -620,13 +620,21 @@ export const StoreService = {
     return parseStoreCart(res);
   },
 
+  async resolveCartFromMutation(res: Record<string, unknown>): Promise<StoreCart> {
+    const data = asMap(res.data) ?? asMap(res.cart) ?? res;
+    if (Array.isArray(data.items) || Array.isArray(data.cartItems)) {
+      return parseStoreCart(res);
+    }
+    return StoreService.getCart();
+  },
+
   async addCartItem(productId: string, quantity = 1): Promise<StoreCart> {
     const res = await apiRequest<Record<string, unknown>>(
       'POST',
       '/api/store-orders/cart/items',
       { body: { productId, quantity } },
     );
-    return parseStoreCart(res);
+    return StoreService.resolveCartFromMutation(res);
   },
 
   async updateCartItem(itemId: string, quantity: number): Promise<StoreCart> {
@@ -635,7 +643,7 @@ export const StoreService = {
       `/api/store-orders/cart/items/${itemId}`,
       { body: { quantity } },
     );
-    return parseStoreCart(res);
+    return StoreService.resolveCartFromMutation(res);
   },
 
   async removeCartItem(itemId: string): Promise<StoreCart> {
@@ -643,7 +651,7 @@ export const StoreService = {
       'DELETE',
       `/api/store-orders/cart/items/${itemId}`,
     );
-    return parseStoreCart(res);
+    return StoreService.resolveCartFromMutation(res);
   },
 
   async clearCart(): Promise<void> {

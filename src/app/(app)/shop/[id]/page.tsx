@@ -25,7 +25,9 @@ export default function ProductDetailPage() {
   if (isLoading) return <PageLoader label="Loading product details..." />;
   if (isError || !product) return <NetworkErrorView onRetry={() => refetch()} />;
 
-  const cartItem = items.find((i) => i.productId === product.id);
+  const cartItem = product.id
+    ? items.find((i) => i.productId && i.productId === product.id)
+    : undefined;
   const cartQty = cartItem?.quantity || 0;
   const images = product.images;
 
