@@ -186,18 +186,16 @@ function InnerProviders({ children }: { children: React.ReactNode }) {
   const [isCartLoading, setIsCartLoading] = useState(false);
   const [isCartMutating, setIsCartMutating] = useState(false);
   const [isDrawerOpen, setDrawerOpen] = useState(false);
-  const [cartGeneration, setCartGeneration] = useState(0);
   const cartControllerRef = useRef(createCartMutationController());
+  const cartGenerationRef = useRef(0);
+  const prevCartTokenScopeRef = useRef<string | null>(null);
 
   const cartTokenScope = status === 'authenticated' ? TokenStorage.read() : null;
-
-  useEffect(() => {
-    setCartGeneration((generation) => generation + 1);
-  }, [cartTokenScope]);
-
-  useEffect(() => {
-    cartControllerRef.current.setGeneration(cartGeneration);
-  }, [cartGeneration]);
+  if (prevCartTokenScopeRef.current !== cartTokenScope) {
+    prevCartTokenScopeRef.current = cartTokenScope;
+    cartGenerationRef.current += 1;
+    cartControllerRef.current.setGeneration(cartGenerationRef.current);
+  }
 
   // Global 401 guard
   useEffect(() => {
@@ -439,10 +437,10 @@ function InnerProviders({ children }: { children: React.ReactNode }) {
   }, [applyCart, runCartMutation]);
 
   useEffect(() => {
-    if (status === 'authenticated') {
+    if (cartTokenScope) {
       refreshCart();
     }
-  }, [status, refreshCart]);
+  }, [cartTokenScope, refreshCart]);
 
   // Delivery fee query scoped by customer zone
   const zoneId = customer?.zone.id || undefined;
