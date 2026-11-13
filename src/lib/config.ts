@@ -1,9 +1,10 @@
 /**
  * Empty means "call the API same-origin through the Next.js proxy" (see
- * next.config.ts rewrites). The backend sends no Access-Control-Allow-Origin,
- * so a browser cannot call it cross-origin directly; the proxy exists so the
- * app works without a backend CORS change. Set NEXT_PUBLIC_API_BASE_URL to a
- * full origin to bypass the proxy once CORS is allowlisted.
+ * src/app/api/[...path]/route.ts). The backend sends no Access-Control-Allow-Origin
+ * and rejects unknown browser Origin headers on Better Auth endpoints with
+ * INVALID_ORIGIN, so the proxy forwards requests with the upstream Origin. Set
+ * NEXT_PUBLIC_API_BASE_URL to a full origin to bypass the proxy once CORS and
+ * trustedOrigins are allowlisted.
  */
 export const AppConfig = {
   baseUrl: process.env.NEXT_PUBLIC_API_BASE_URL ?? '',
