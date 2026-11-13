@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Eye, EyeOff, Mail, Lock, ArrowRight, Loader2, ShieldCheck, Truck, MapPin } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock, ArrowRight, Loader2 } from 'lucide-react';
 import { useAuth, useFeedback } from '@/providers/app-providers';
 import { ApiException } from '@/lib/api-client';
 import { AuthService } from '@/lib/services/api-services';
@@ -101,7 +101,7 @@ export default function SignInPage() {
 
         <div className="relative z-10 max-w-lg my-auto py-12">
           <span className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/10 text-emerald-200 text-xs font-semibold tracking-wide uppercase mb-6">
-            <ShieldCheck className="w-4 h-4" /> Smart Waste Management
+            Smart Waste Management
           </span>
           <h1 className="text-4xl font-extrabold leading-tight mb-4">
             Cleaner neighborhoods, effortless pickups & real-time tracking.
@@ -112,12 +112,10 @@ export default function SignInPage() {
 
           <div className="grid grid-cols-2 gap-4">
             <div className="p-4 rounded-2xl bg-white/10 backdrop-blur-sm border border-white/10">
-              <Truck className="w-6 h-6 text-emerald-300 mb-2" />
               <div className="font-bold text-sm">Live Truck Tracking</div>
               <div className="text-xs text-emerald-100/75 mt-1">Real-time GPS updates & accurate arrival ETAs.</div>
             </div>
             <div className="p-4 rounded-2xl bg-white/10 backdrop-blur-sm border border-white/10">
-              <MapPin className="w-6 h-6 text-emerald-300 mb-2" />
               <div className="font-bold text-sm">Flexible Plans</div>
               <div className="text-xs text-emerald-100/75 mt-1">Pay-As-You-Go, Prepaid, or Postpaid subscriptions.</div>
             </div>
