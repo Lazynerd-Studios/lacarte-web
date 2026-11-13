@@ -109,18 +109,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           )}
         </div>
 
-        {canBookPickup && (
-          <div className="px-4 pt-5 pb-2">
-            <Link
-              href="/pickups/new"
-              className="w-full py-3 px-4 rounded-full bg-[#FFB400] hover:bg-[#e5a200] text-[#0A0D12] font-bold text-sm flex items-center justify-center gap-2 shadow-xs transition"
-            >
-              <Plus className="w-4 h-4 stroke-[2.5]" />
-              Schedule Pickup
-            </Link>
-          </div>
-        )}
-
         <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
           {DESKTOP_NAV.map((item) => {
             if (
@@ -140,11 +128,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition ${
-                  active
+                className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition ${active
                     ? 'bg-[#0A0D12] text-white font-semibold'
                     : 'text-[#4A5565] hover:bg-[#F3F4F6] hover:text-[#0A0D12]'
-                }`}
+                  }`}
               >
                 <Icon
                   className={`w-4 h-4 ${active ? 'text-[#FFB400]' : 'text-[#6A7282]'}`}
@@ -163,10 +150,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <div className="min-w-0 flex-1">
               <p className="text-sm font-semibold text-[#0A0D12] truncate">
                 {displayName}
-              </p>
-              <p className="text-xs text-[#6A7282] truncate flex items-center gap-1">
-                <MapPin className="w-3 h-3 shrink-0" />
-                {locationText}
               </p>
             </div>
           </div>
@@ -273,14 +256,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <Link
               key={item.href}
               href={item.href}
-              className={`flex flex-col items-center justify-center py-1 px-3 rounded-xl text-xs font-medium transition ${
-                active ? 'text-[#0A0D12] font-bold' : 'text-[#6A7282]'
-              }`}
+              className={`flex flex-col items-center justify-center py-1 px-3 rounded-xl text-xs font-medium transition ${active ? 'text-[#0A0D12] font-bold' : 'text-[#6A7282]'
+                }`}
             >
               <div
-                className={`p-1.5 rounded-full mb-0.5 ${
-                  active ? 'bg-[#FFB400]/20 text-[#0A0D12]' : ''
-                }`}
+                className={`p-1.5 rounded-full mb-0.5 ${active ? 'bg-[#FFB400]/20 text-[#0A0D12]' : ''
+                  }`}
               >
                 <Icon className="w-5 h-5" />
               </div>
